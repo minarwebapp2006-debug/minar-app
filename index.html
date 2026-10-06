@@ -136,10 +136,18 @@
                                 <p id="profileRole" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">User</p>
                             </div>
                         </div>
-                        <button onclick="openPwdModal()" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 transition">
-                            <span class="material-symbols-outlined text-sm">key</span>
-                            <span data-translate="changeAdminPwd">Admin Profile Password Change</span>
-                        </button>
+                        <div id="setupPwdWrap" class="hidden">
+                            <button onclick="openSetupPwdModal()" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 transition">
+                                <span class="material-symbols-outlined text-sm">password</span>
+                                <span data-translate="setupAdminPwd">Admin Profile Password Setup</span>
+                            </button>
+                        </div>
+                        <div id="changePwdWrap" class="hidden">
+                            <button onclick="openPwdModal()" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 transition">
+                                <span class="material-symbols-outlined text-sm">key</span>
+                                <span data-translate="changeAdminPwd">Change Admin Profile Password</span>
+                            </button>
+                        </div>
                         <button id="installBtn" onclick="installApp()" class="hidden w-full items-center space-x-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-sm text-emerald-700 dark:text-emerald-300 transition">
                             <span class="material-symbols-outlined text-sm">install_mobile</span>
                             <span>Install App</span>
@@ -476,6 +484,29 @@
         </div>
     </div>
 
+    <!-- Admin Password Setup Modal -->
+    <div id="setupPwdModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white" data-translate="setupAdminPwd">Admin Profile Password Setup</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-translate="setupPwdHint">This password is only for your Admin Profile. It is separate from your login password.</p>
+            <form onsubmit="handleSetupPwd(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1" data-translate="newPwdLabel">New Password</label>
+                    <input type="password" id="setupPwd1" required minlength="4" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1" data-translate="confirmPwdLabel">Confirm Password</label>
+                    <input type="password" id="setupPwd2" required minlength="4" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                </div>
+                <div id="setupPwdErrorMsg" class="hidden text-xs text-red-500 font-medium text-center"></div>
+                <div class="flex items-center space-x-3 pt-1">
+                    <button type="button" onclick="closeSetupPwdModal()" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm" data-translate="cancelBtn">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm" data-translate="setupPwdBtn">Set Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Login / Apply Gate -->
     <div id="authGate" class="fixed inset-0 z-[70] bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
         <button onclick="toggleLanguage()" class="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300"><span id="gateLangLabel">বাংলা</span></button>
@@ -557,7 +588,11 @@
                 thLayer: "Layer",
                 bodyLabel: "Body Structure",
                 layerLabel: "Layer",
-                changeAdminPwd: "Admin Profile Password Change",
+                changeAdminPwd: "Change Admin Profile Password",
+                setupAdminPwd: "Admin Profile Password Setup",
+                setupPwdHint: "This password is only for your Admin Profile. It is separate from your login password.",
+                confirmPwdLabel: "Confirm Password",
+                setupPwdBtn: "Set Password",
                 logoutBtn: "Logout",
                 oldPwdLabel: "Old Password",
                 newPwdLabel: "New Password",
@@ -619,6 +654,10 @@
                 bodyLabel: "বডি স্ট্রাকচার",
                 layerLabel: "লেয়ার",
                 changeAdminPwd: "অ্যাডমিন প্রোফাইল পাসওয়ার্ড পরিবর্তন",
+                setupAdminPwd: "অ্যাডমিন প্রোফাইল পাসওয়ার্ড সেটআপ",
+                setupPwdHint: "এই পাসওয়ার্ড শুধু আপনার অ্যাডমিন প্রোফাইলের জন্য। এটি লগইন পাসওয়ার্ড থেকে আলাদা।",
+                confirmPwdLabel: "পাসওয়ার্ড নিশ্চিত করুন",
+                setupPwdBtn: "পাসওয়ার্ড সেট করুন",
                 logoutBtn: "লগআউট",
                 oldPwdLabel: "পুরাতন পাসওয়ার্ড",
                 newPwdLabel: "নতুন পাসওয়ার্ড",
@@ -744,6 +783,10 @@
 
         // Admin Authentication Modals
         function promptAdminLogin() {
+            if (adminPwdSet === false) {                       // this user has not created an Admin Profile password yet
+                showToast(L('Set up your Admin Profile Password first.', 'আগে আপনার অ্যাডমিন প্রোফাইল পাসওয়ার্ড সেটআপ করুন।'), true);
+                openSetupPwdModal(); return;
+            }
             document.getElementById('adminPasswordModal').classList.remove('hidden');
             document.getElementById('adminPasswordInput').value = '';
             document.getElementById('passwordErrorMsg').classList.add('hidden');
@@ -1142,6 +1185,7 @@
                 document.getElementById('profileEmail').innerText = me.email;
                 document.getElementById('profileAvatar').innerText = me.email[0];
                 document.getElementById('profileRole').innerText = me.is_owner ? 'App Owner' : L('User', 'ইউজার');
+                await refreshAdminPwdState();
                 if (!dataLoaded || reload) { await loadAllData(); dataLoaded = true; if (currentRole === 'admin') renderAdminBrands(); if (currentRole === 'salesman') renderSalesmanBrands(); }
             } else if (me) {                              // pending / locked / kicked / rejected: sign out and explain
                 const st = me.status; await sb.auth.signOut(); me = null; dataLoaded = false; showroomData = [];
@@ -1179,7 +1223,7 @@
             } finally { btn.disabled = false; }
         }
         async function logoutUser() {
-            await sb.auth.signOut(); me = null; dataLoaded = false; showroomData = []; isViewerAdmin = false;
+            await sb.auth.signOut(); me = null; dataLoaded = false; showroomData = []; isViewerAdmin = false; adminPwdSet = null; applyAdminPwdState();
             document.getElementById('settingsPanel').classList.add('hidden');
             _switchView('home'); await enforceSession();
         }
@@ -1215,6 +1259,35 @@
             document.getElementById('oldPwdInput').value = ''; document.getElementById('newPwdInput').value = '';
             document.getElementById('pwdErrorMsg').classList.add('hidden');
             document.getElementById('pwdModal').classList.remove('hidden');
+        }
+        // ---- per-user Admin Profile password (separate from the login password)
+        let adminPwdSet = null;
+        function applyAdminPwdState() {
+            document.getElementById('setupPwdWrap').classList.toggle('hidden', adminPwdSet !== false);
+            document.getElementById('changePwdWrap').classList.toggle('hidden', adminPwdSet !== true);
+        }
+        async function refreshAdminPwdState() {
+            const { data, error } = await sb.rpc('admin_pwd_is_set');
+            adminPwdSet = error ? null : data === true;
+            applyAdminPwdState();
+        }
+        function openSetupPwdModal() {
+            document.getElementById('settingsPanel').classList.add('hidden');
+            document.getElementById('setupPwd1').value = ''; document.getElementById('setupPwd2').value = '';
+            document.getElementById('setupPwdErrorMsg').classList.add('hidden');
+            document.getElementById('setupPwdModal').classList.remove('hidden');
+        }
+        function closeSetupPwdModal() { document.getElementById('setupPwdModal').classList.add('hidden'); }
+        async function handleSetupPwd(e) {
+            e.preventDefault();
+            const p1 = document.getElementById('setupPwd1').value, p2 = document.getElementById('setupPwd2').value, err = document.getElementById('setupPwdErrorMsg');
+            const fail = m => { err.innerText = m; err.classList.remove('hidden'); };
+            if (p1.length < 4) return fail(L('Password must be at least 4 characters.', 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।'));
+            if (p1 !== p2) return fail(L('Passwords do not match.', 'পাসওয়ার্ড দুটি মিলছে না।'));
+            const { data } = await sb.rpc('set_admin_password', { new_pwd: p1 });
+            if (data !== true) { await refreshAdminPwdState(); return fail(L('Could not set the password. It may already be set.', 'পাসওয়ার্ড সেট করা যায়নি। হয়তো আগেই সেট করা আছে।')); }
+            adminPwdSet = true; applyAdminPwdState(); closeSetupPwdModal();
+            showToast(L('Admin Profile Password set successfully.', 'অ্যাডমিন প্রোফাইল পাসওয়ার্ড সেট হয়েছে।'));
         }
         function closePwdModal() { document.getElementById('pwdModal').classList.add('hidden'); }
         async function handlePwdChange(e) {
