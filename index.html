@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minar Catalogue & Price Manager</title>
+    <meta name="application-name" content="MCPM">
+    <meta name="apple-mobile-web-app-title" content="MCPM">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#059669">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        body {
+            font-family: 'Inter', 'Hind Siliguri', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        body:not(.is-owner) .owner-only { display: none !important; }
+        /* Print / Save as PDF: only the category-grouped price list */
+        #printArea { display: none; }
+        @page { size: A4; margin: 0.5in; }
+        @media print {
+            body.printing > *:not(#printArea) { display: none !important; }
+            body.printing #printArea { display: block !important; color: #000; background: #fff; font-family: 'Inter', 'Hind Siliguri', sans-serif; }
+            #printArea .pa-head { margin-bottom: 16px; border-bottom: 2px solid #059669; padding-bottom: 8px; }
+            #printArea h1 { font-size: 22px; margin: 0 0 4px; }
+            #printArea table.pa-wrap { border-collapse: collapse; }
+            #printArea table.pa-wrap > thead > tr > td, #printArea table.pa-wrap > tbody > tr > td { border: 0; padding: 0; }
+            #printArea table.pa-wrap > thead { display: table-header-group; }
+            #printArea .pa-app { text-align: center; font-size: 9px; font-weight: 600; color: #000; opacity: 0.5; margin-bottom: 10px; }
+            #printArea h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #printArea .pa-block { margin-bottom: 18px; }
+            #printArea h2 { font-size: 15px; background: #ecfdf5; border-left: 4px solid #059669; padding: 6px 10px; margin: 0 0 6px; break-after: avoid; }
+            #printArea h2 span { font-weight: 400; font-size: 12px; color: #555; }
+            #printArea table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            #printArea th, #printArea td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+            #printArea th { background: #f1f5f9; }
+            #printArea tr { break-inside: avoid; }
+            #printArea .n { width: 36px; text-align: center; }
+            #printArea .r { text-align: right; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-emerald-100 dark:border-emerald-900/40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('home')">
+                <div class="flex flex-col items-center">
+                    <div class="w-9 h-9 p-1.5 rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-500/20"><svg viewBox="0 -960 960 960" class="w-full h-full" fill="currentColor"><path d="M160-740v-60h642v60H160Zm5 580v-258h-49v-60l44-202h641l44 202v60h-49v258h-60v-258H547v258H165Zm60-60h262v-198H225v198Zm-50-258h611-611Zm0 0h611l-31-142H206l-31 142Z"/></svg></div>
+                    <span class="text-[8px] font-bold tracking-wider text-emerald-700 dark:text-emerald-400 leading-none mt-0.5">MCPM</span>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight text-emerald-900 dark:text-emerald-400" data-translate="appTitle">Minar</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400" data-translate="appSubtitle">Catalogue & Price Manager</p>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- App Owner Button (Only visible in Owner view or toggle) -->
+                <button id="ownerNavBtn" onclick="openOwnerModal()" class="owner-only hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition">
+                    <span class="material-symbols-outlined text-sm">shield_person</span>
+                    <span data-translate="ownerOption">App Owner</span>
+                </button>
+
+                <!-- Language Selector -->
+                <button onclick="toggleLanguage()" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                    <span class="material-symbols-outlined text-sm">language</span>
+                    <span id="langLabel">বাংলা</span>
+                </button>
+
+                <!-- Dark/Light Mode Toggle -->
+                <button onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition" aria-label="Toggle Theme">
+                    <span class="material-symbols-outlined text-sm dark:hidden">dark_mode</span>
+                    <span class="material-symbols-outlined text-sm hidden dark:inline">light_mode</span>
+                </button>
+
+                <!-- Settings Gear -->
+                <div class="relative">
+                    <button onclick="toggleSettings(event)" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition" aria-label="Settings">
+                        <span class="material-symbols-outlined text-sm">settings</span>
+                    </button>
+                    <div id="settingsPanel" onclick="event.stopPropagation()" class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-4 space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <div id="profileAvatar" class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold uppercase">?</div>
+                            <div class="min-w-0">
+                                <p id="profileEmail" class="text-sm font-semibold text-slate-900 dark:text-white truncate">-</p>
+                                <p id="profileRole" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">User</p>
+                            </div>
+                        </div>
+                        <button onclick="openPwdModal()" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 transition">
+                            <span class="material-symbols-outlined text-sm">key</span>
+                            <span data-translate="changeAdminPwd">Admin Profile Password Change</span>
+                        </button>
+                        <button id="installBtn" onclick="installApp()" class="hidden w-full items-center space-x-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-sm text-emerald-700 dark:text-emerald-300 transition">
+                            <span class="material-symbols-outlined text-sm">install_mobile</span>
+                            <span>Install App</span>
+                        </button>
+                        <button onclick="logoutUser()" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 text-sm text-red-600 transition">
+                            <span class="material-symbols-outlined text-sm">logout</span>
+                            <span data-translate="logoutBtn">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Role Selection Home View -->
+        <div id="homeView" class="space-y-8 py-10">
+            <div class="text-center max-w-2xl mx-auto space-y-3">
+                
+                <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white" data-translate="welcomeHeader">
+                    Select Your Access Profile
+                </h2>
+                <p class="text-slate-600 dark:text-slate-400 text-sm sm:text-base" data-translate="welcomeDesc">
+                    Manage your showroom catalogues, pricing precision, and sales flow effortlessly across all devices.
+                </p>
+            </div>
+
+            <!-- Profile Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto pt-4">
+                <!-- Admin Profile Card -->
+                <div onclick="promptAdminLogin()" class="group relative bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 transition-all duration-300 cursor-pointer flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-2xl">admin_panel_settings</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2" data-translate="adminProfileTitle">Admin Profile</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm mb-6" data-translate="adminProfileDesc">
+                            Create brand catalogues, add products, update specifications & pricing, export PDFs, and manage full inventory.
+                        </p>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
+                        <span data-translate="accessAdmin">Access Admin Portal</span>
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </div>
+
+                <!-- Salesman Profile Card -->
+                <div onclick="switchView('salesman')" class="group relative bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 transition-all duration-300 cursor-pointer flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-2xl">support_agent</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2" data-translate="salesmanProfileTitle">Salesman Profile</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm mb-6" data-translate="salesmanProfileDesc">
+                            View active brand catalogues, search showroom items instantly, check accurate retail prices, and assist customers.
+                        </p>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
+                        <span data-translate="accessSalesman">Access Sales Portal</span>
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile App Owner Button Indicator -->
+            <div class="owner-only text-center sm:hidden pt-4">
+                <button onclick="openOwnerModal()" class="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 text-sm font-semibold">
+                    <span class="material-symbols-outlined text-sm">shield_person</span>
+                    <span data-translate="ownerOption">App Owner</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard View -->
+        <div id="adminView" class="hidden space-y-6">
+            <!-- Admin Top Bar / Breadcrumb -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex items-center space-x-3">
+                    <button onclick="switchView('home')" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                        <span class="material-symbols-outlined text-sm">arrow_back</span>
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-xl font-bold text-slate-900 dark:text-white" data-translate="adminDashboard">Admin Dashboard</h2>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 uppercase">Admin</span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400" data-translate="adminDashboardSub">Manage brands, catalogues, and pricing</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openBrandModal()" class="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm shadow-md shadow-emerald-600/20 transition">
+                        <span class="material-symbols-outlined text-sm">add_business</span>
+                        <span data-translate="createBrandBtn">Create Brand Catalog</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Brands Container -->
+            <div id="adminBrandsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamically populated brand cards -->
+            </div>
+        </div>
+
+        <!-- Brand Detail / Product Management View -->
+        <div id="brandDetailView" class="hidden space-y-6">
+            <!-- Top Navigation & Brand Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex items-center space-x-4">
+                    <button id="backToDashboardBtn" onclick="goBackFromBrand()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 id="currentBrandNameTitle" class="text-2xl font-bold text-slate-900 dark:text-white">Brand Name</h2>
+                            <span id="currentBrandBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">Catalog</span>
+                        </div>
+                        <p id="currentBrandDescText" class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Brand description details</p>
+                    </div>
+                </div>
+                <!-- Action Buttons (Add Product & Export PDF) -->
+                <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+                    <button id="exportPdfBtn" onclick="exportBrandPDF()" class="inline-flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium px-4 py-2.5 rounded-xl text-sm transition">
+                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        <span data-translate="savePdfBtn">Save / Export PDF</span>
+                    </button>
+                    <button id="addProductHeaderBtn" onclick="openProductModal()" class="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm shadow-md shadow-emerald-600/20 transition">
+                        <span class="material-symbols-outlined text-sm">add_circle</span>
+                        <span data-translate="addProductBtn">Add Product</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search & Filter Bar -->
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="relative w-full md:w-96">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <span class="material-symbols-outlined text-lg">search</span>
+                    </span>
+                    <input type="text" id="productSearchInput" list="dlSearch" oninput="filterProducts()" placeholder="Search model name, number, size (e.g. 12x24)..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+                    <span id="productCountBadge" class="text-xs font-semibold text-slate-500 dark:text-slate-400 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">0 Products</span>
+                </div>
+            </div>
+
+            <!-- Products Table / Grid View -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                <th class="py-3.5 px-4 sm:px-6" data-translate="thModelName">Model Name / Number</th>
+                                <th class="py-3.5 px-4 sm:px-6" data-translate="thCategory">Category</th>
+                                <th class="py-3.5 px-4 sm:px-6" data-translate="thSize">Size / Dimensions</th>
+                                <th class="py-3.5 px-4 sm:px-6" data-translate="thBody">Body Structure</th>
+                                <th class="py-3.5 px-4 sm:px-6" data-translate="thLayer">Layer</th>
+                                <th class="py-3.5 px-4 sm:px-6" data-translate="thPrice">Price (BDT)</th>
+                                <th id="thActionsHeader" class="py-3.5 px-4 sm:px-6 text-right" data-translate="thActions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Empty State -->
+                <div id="noProductsState" class="hidden text-center py-12">
+                    <span class="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 mb-2">inventory_2</span>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm" data-translate="noProductsFound">No products found in this catalogue.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salesman Portal View -->
+        <div id="salesmanView" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex items-center space-x-4">
+                    <button onclick="switchView('home')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white" data-translate="salesmanPortalTitle">Salesman Portal</h2>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">Salesman View</span>
+                        </div>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5" data-translate="salesmanPortalSub">Browse available brand catalogues and showroom prices</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Salesman Brand List -->
+            <div id="salesmanBrandsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Admin Password Modal -->
+    <div id="adminPasswordModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6 animate-in fade-in zoom-in duration-200">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                    <span class="material-symbols-outlined text-2xl">lock</span>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white" data-translate="adminAuthTitle">Admin Authentication</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400" data-translate="adminAuthDesc">Enter password to access admin profile</p>
+            </div>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="passwordLabel">Password</label>
+                    <input type="password" id="adminPasswordInput" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div id="passwordErrorMsg" class="hidden text-xs text-red-500 font-medium text-center">Incorrect password. Please try again.</div>
+                <div class="flex items-center space-x-3 pt-2">
+                    <button type="button" onclick="closeAdminModal()" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition" data-translate="cancelBtn">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition" data-translate="loginBtn">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create/Edit Brand Modal -->
+    <div id="brandModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 id="brandModalTitle" class="text-xl font-bold text-slate-900 dark:text-white" data-translate="createBrandHeader">Create Brand Catalog</h3>
+                <button onclick="closeBrandModal()" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+            </div>
+            <form onsubmit="saveBrandForm(event)" class="space-y-4">
+                <input type="hidden" id="editingBrandId">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="brandNameLabel">Brand Name</label>
+                    <input type="text" id="brandNameInput" list="dlBrandName" required placeholder="e.g.RAK Ceramics / Star Ceramic" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="brandDescLabel">Description / Details</label>
+                    <input type="text" id="brandDescInput" list="dlBrandDesc" placeholder="Enter brand catalogue description..." class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div class="flex items-center space-x-3 pt-2">
+                    <button type="button" onclick="closeBrandModal()" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition" data-translate="cancelBtn">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition" data-translate="saveBtn">Save Brand</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create/Edit Product Modal -->
+    <div id="productModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 id="productModalTitle" class="text-xl font-bold text-slate-900 dark:text-white" data-translate="addProductHeader">Add New Product</h3>
+                <button onclick="closeProductModal()" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+            </div>
+            <form onsubmit="saveProductForm(event)" class="space-y-4">
+                <input type="hidden" id="editingProductId">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="modelNameLabel">Model Name / Number</label>
+                    <input type="text" id="productModelInput" list="dlModel" required placeholder="e.g. Model X-500 / M-102" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="categoryLabel">Category</label>
+                    <input type="text" id="productCategoryInput" list="categoryList" placeholder="" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                    <datalist id="categoryList"></datalist>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="sizeLabel">Size / Dimensions</label>
+                    <input type="text" id="productSizeInput" list="dlSize" placeholder="" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="bodyLabel">Body Structure</label>
+                    <input type="text" id="productBodyInput" list="dlBody" placeholder="" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="layerLabel">Layer</label>
+                    <input type="text" id="productLayerInput" list="dlLayer" placeholder="" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1" data-translate="priceLabel">Price (BDT / ৳)</label>
+                    <input type="number" step="0.01" id="productPriceInput" list="dlPrice" required placeholder="e.g. 1250" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition">
+                </div>
+                <div class="flex items-center space-x-3 pt-2">
+                    <button type="button" onclick="closeProductModal()" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition" data-translate="cancelBtn">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition" data-translate="saveBtn">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- App Owner Panel -->
+    <div id="ownerModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center"><span class="material-symbols-outlined text-2xl">verified_user</span></div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white" data-translate="ownerModalTitle">App Owner Dashboard</h3>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2" data-translate="ownerPendingTitle">Pending Requests</h4>
+                <div id="ownerPendingList" class="space-y-2"></div>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2" data-translate="ownerUsersTitle">Approved Users</h4>
+                <div id="ownerUsersList" class="space-y-2"></div>
+            </div>
+            <button onclick="closeOwnerModal()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition" data-translate="closeBtn">Close</button>
+        </div>
+    </div>
+
+    <!-- Admin Password Change Modal -->
+    <div id="pwdModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white" data-translate="changeAdminPwd">Admin Profile Password Change</h3>
+            <form onsubmit="handlePwdChange(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1" data-translate="oldPwdLabel">Old Password</label>
+                    <input type="password" id="oldPwdInput" required class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1" data-translate="newPwdLabel">New Password</label>
+                    <input type="password" id="newPwdInput" required minlength="4" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                </div>
+                <div id="pwdErrorMsg" class="hidden text-xs text-red-500 font-medium text-center"></div>
+                <div class="flex items-center space-x-3 pt-1">
+                    <button type="button" onclick="closePwdModal()" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm" data-translate="cancelBtn">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm" data-translate="changePwdBtn">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login / Apply Gate -->
+    <div id="authGate" class="fixed inset-0 z-[70] bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+        <button onclick="toggleLanguage()" class="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300"><span id="gateLangLabel">বাংলা</span></button>
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-5">
+            <div class="text-center space-y-1">
+                <div class="w-16 h-16 p-3 rounded-2xl bg-emerald-600 text-white mx-auto shadow-lg shadow-emerald-600/20"><svg viewBox="0 -960 960 960" class="w-full h-full" fill="currentColor"><path d="M160-740v-60h642v60H160Zm5 580v-258h-49v-60l44-202h641l44 202v60h-49v258h-60v-258H547v258H165Zm60-60h262v-198H225v198Zm-50-258h611-611Zm0 0h611l-31-142H206l-31 142Z"/></svg></div>
+                <p class="text-[10px] font-bold tracking-widest text-emerald-700 dark:text-emerald-400">MCPM</p>
+                <h2 class="text-xl font-bold text-slate-900 dark:text-white">Minar Catalogue &amp; Price Manager</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-semibold">
+                <button id="tabLogin" onclick="setAuthMode('login')" class="py-2 rounded-lg" data-translate="authLoginTab">Login</button>
+                <button id="tabApply" onclick="setAuthMode('apply')" class="py-2 rounded-lg" data-translate="authApplyTab">Apply for Access</button>
+            </div>
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1" data-translate="gmailLabel">Gmail</label>
+                    <input type="email" id="authEmail" required placeholder="name@gmail.com" autocomplete="username" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1" data-translate="passwordLabel">Password</label>
+                    <input type="password" id="authPassword" required minlength="4" autocomplete="current-password" class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                </div>
+                <div id="authMsg" class="hidden text-xs font-medium text-center rounded-lg px-3 py-2"></div>
+                <button type="submit" id="authSubmitBtn" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+    <datalist id="dlBrandName"></datalist><datalist id="dlBrandDesc"></datalist><datalist id="dlModel"></datalist>
+    <datalist id="dlSize"></datalist><datalist id="dlBody"></datalist><datalist id="dlLayer"></datalist>
+    <datalist id="dlPrice"></datalist><datalist id="dlSearch"></datalist>
+
+    <!-- Notification Toast Message Box (Replaces alert) -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 max-w-sm">
+        <div class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-3.5 rounded-2xl shadow-xl flex items-center space-x-3 border border-slate-800 dark:border-slate-200">
+            <span id="toastIcon" class="material-symbols-outlined text-emerald-400">check_circle</span>
+            <p id="toastMessage" class="text-sm font-medium">Notification message here</p>
+        </div>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script>
+        // Localization Dictionary
+        const translations = {
+            en: {
+                appTitle: "Minar",
+                appSubtitle: "Catalogue & Price Manager",
+                ownerOption: "App Owner",
+                badgeText: "Next-Gen Showroom Portal 2026",
+                welcomeHeader: "Select Your Access Profile",
+                welcomeDesc: "Manage your showroom catalogues, pricing precision, and sales flow effortlessly across all devices.",
+                adminProfileTitle: "Admin Profile",
+                adminProfileDesc: "Create brand catalogues, add products, update specifications & pricing, export PDFs, and manage full inventory.",
+                accessAdmin: "Access Admin Portal",
+                salesmanProfileTitle: "Salesman Profile",
+                salesmanProfileDesc: "View active brand catalogues, search showroom items instantly, check accurate retail prices, and assist customers.",
+                accessSalesman: "Access Sales Portal",
+                adminDashboard: "Admin Dashboard",
+                adminDashboardSub: "Manage brands, catalogues, and pricing",
+                createBrandBtn: "Create Brand Catalog",
+                salesmanPortalTitle: "Salesman Portal",
+                salesmanPortalSub: "Browse available brand catalogues and showroom prices",
+                savePdfBtn: "Save / Export PDF",
+                addProductBtn: "Add Product",
+                thModelName: "Model Name / Number",
+                thSize: "Size / Dimensions",
+                thPrice: "Price (BDT)",
+                thActions: "Actions",
+                noProductsFound: "No products found in this catalogue.",
+                adminAuthTitle: "Admin Authentication",
+                adminAuthDesc: "Enter password to access admin profile",
+                passwordLabel: "Password",
+                cancelBtn: "Cancel",
+                loginBtn: "Login",
+                thBody: "Body Structure",
+                thCategory: "Category",
+                categoryLabel: "Category",
+                thLayer: "Layer",
+                bodyLabel: "Body Structure",
+                layerLabel: "Layer",
+                changeAdminPwd: "Admin Profile Password Change",
+                logoutBtn: "Logout",
+                oldPwdLabel: "Old Password",
+                newPwdLabel: "New Password",
+                authLoginTab: "Login",
+                authApplyTab: "Apply for Access",
+                gmailLabel: "Gmail",
+                ownerPendingTitle: "Pending Requests",
+                ownerUsersTitle: "Approved Users",
+                changePwdBtn: "Change Password",
+                createBrandHeader: "Create Brand Catalog",
+                brandNameLabel: "Brand Name",
+                brandDescLabel: "Description / Details",
+                saveBtn: "Save",
+                addProductHeader: "Add New Product",
+                modelNameLabel: "Model Name / Number",
+                sizeLabel: "Size / Dimensions",
+                priceLabel: "Price (BDT / ৳)",
+                ownerModalTitle: "App Owner Dashboard",
+                ownerModalSub: "Showroom proprietary owner credentials & system controls.",
+                ownerNameLabel: "Owner Name:",
+                systemStatusLabel: "System Status:",
+                encryptionLabel: "Data Security:",
+                closeBtn: "Close"
+            },
+            bn: {
+                appTitle: "Minar",
+                appSubtitle: "ক্যাটালগ ও মূল্য ব্যবস্থাপনা",
+                ownerOption: "অ্যাপ মালিক",
+                badgeText: "ভবিষ্যতের শোরুম পোর্টাল ২০২৬",
+                welcomeHeader: "আপনার অ্যাক্সেস প্রোফাইল নির্বাচন করুন",
+                welcomeDesc: "সমস্ত ডিভাইসে সহজে আপনার শোরুম ক্যাটালগ, পণ্যের মূল্য এবং বিক্রয় পরিচালনা করুন।",
+                adminProfileTitle: "অ্যাডমিন প্রোফাইল",
+                adminProfileDesc: "ব্র্যান্ড ক্যাটালগ তৈরি করুন, পণ্য যোগ করুন, স্পেসিফিকেশন ও মূল্য আপডেট করুন এবং পিডিএফ সংরক্ষণ করুন।",
+                accessAdmin: "অ্যাডমিন পোর্টাল প্রবেশ",
+                salesmanProfileTitle: "সেলসম্যান প্রোফাইল",
+                salesmanProfileDesc: "সক্রিয় ব্র্যান্ড ক্যাটালগ দেখুন, পণ্য অনুসন্ধান করুন, সঠিক খুচরা মূল্য যাচাই করুন।",
+                accessSalesman: "সেলস পোর্টাল প্রবেশ",
+                adminDashboard: "অ্যাডমিন ড্যাশবোর্ড",
+                adminDashboardSub: "ব্র্যান্ড, ক্যাটালগ এবং মূল্য পরিচালনা করুন",
+                createBrandBtn: "ব্র্যান্ড ক্যাটালগ তৈরি করুন",
+                salesmanPortalTitle: "সেলসম্যান পোর্টাল",
+                salesmanPortalSub: "উপলব্ধ ব্র্যান্ড ক্যাটালগ এবং শোরুমের মূল্য ব্রাউজ করুন",
+                savePdfBtn: "পিডিএফ সেভ / এক্সপোর্ট",
+                addProductBtn: "প্রোডাক্ট যোগ করুন",
+                thModelName: "মডেল নাম / নম্বর",
+                thSize: "সাইজ / মাত্রা",
+                thPrice: "মূল্য (টাকা)",
+                thActions: "পদক্ষেপ",
+                noProductsFound: "এই ক্যাটালগে কোনো পণ্য পাওয়া যায়নি।",
+                adminAuthTitle: "অ্যাডমিন প্রমাণীকরণ",
+                adminAuthDesc: "অ্যাডমিন প্রোফাইলে প্রবেশ করতে পাসওয়ার্ড দিন",
+                passwordLabel: "পাসওয়ার্ড",
+                cancelBtn: "বাতিল",
+                loginBtn: "লগইন",
+                thBody: "বডি স্ট্রাকচার",
+                thCategory: "ক্যাটাগরি",
+                categoryLabel: "ক্যাটাগরি",
+                thLayer: "লেয়ার",
+                bodyLabel: "বডি স্ট্রাকচার",
+                layerLabel: "লেয়ার",
+                changeAdminPwd: "অ্যাডমিন প্রোফাইল পাসওয়ার্ড পরিবর্তন",
+                logoutBtn: "লগআউট",
+                oldPwdLabel: "পুরাতন পাসওয়ার্ড",
+                newPwdLabel: "নতুন পাসওয়ার্ড",
+                authLoginTab: "লগইন",
+                authApplyTab: "ব্যবহারের আবেদন",
+                gmailLabel: "জিমেইল",
+                ownerPendingTitle: "অপেক্ষমান আবেদন",
+                ownerUsersTitle: "অনুমোদিত ইউজার",
+                changePwdBtn: "পাসওয়ার্ড পরিবর্তন করুন",
+                createBrandHeader: "ব্র্যান্ড ক্যাটালগ তৈরি করুন",
+                brandNameLabel: "ব্র্যান্ডের নাম",
+                brandDescLabel: "বিবরণ / বিস্তারিত",
+                saveBtn: "সংরক্ষণ",
+                addProductHeader: "নতুন প্রোডাক্ট যোগ করুন",
+                modelNameLabel: "মডেল নাম / নম্বর",
+                sizeLabel: "সাইজ / মাত্রা",
+                priceLabel: "মূল্য (টাকা / ৳)",
+                ownerModalTitle: "অ্যাপ ওনার ড্যাশবোর্ড",
+                ownerModalSub: "শোরুম মালিকের অ্যাকাউন্ট এবং সিস্টেম কন্ট্রোল।",
+                ownerNameLabel: "মালিকের নাম:",
+                systemStatusLabel: "সিস্টেম স্ট্যাটাস:",
+                encryptionLabel: "ডেটা সিকিউরিটি:",
+                closeBtn: "বন্ধ করুন"
+            }
+        };
+
+        let currentLang = 'en';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'bn' : 'en';
+            document.getElementById('langLabel').innerText = currentLang === 'en' ? 'বাংলা' : 'English';
+            updateTranslations();
+        }
+
+        function updateTranslations() {
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[currentLang][key]) {
+                    el.innerText = translations[currentLang][key];
+                }
+            });
+        }
+
+        // Theme Toggle
+        const memStore = {};
+        function safeGet(key) {
+            try { return localStorage.getItem(key); } catch (err) { return key in memStore ? memStore[key] : null; }
+        }
+        function safeSet(key, value) {
+            try { localStorage.setItem(key, value); } catch (err) { memStore[key] = value; }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                safeSet('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                safeSet('theme', 'dark');
+            }
+        }
+
+        // Escape user text before putting it into HTML
+        function esc(str) {
+            return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        // Initialize Theme from Storage
+        if (safeGet('theme') === 'dark' || (!safeGet('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // Shared data lives in Supabase (loaded after login)
+        let showroomData = [];
+
+        let currentRole = 'home'; // 'home', 'admin', 'salesman', 'brandDetail'
+        let selectedBrandId = null;
+        let isViewerAdmin = false;
+
+        // Navigation Switcher
+        function switchView(view) {
+            currentRole = view;
+            document.getElementById('homeView').classList.add('hidden');
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('salesmanView').classList.add('hidden');
+            document.getElementById('brandDetailView').classList.add('hidden');
+
+            if (view === 'home') {
+                document.getElementById('homeView').classList.remove('hidden');
+                selectedBrandId = null;
+            } else if (view === 'admin') {
+                document.getElementById('adminView').classList.remove('hidden');
+                renderAdminBrands();
+            } else if (view === 'salesman') {
+                document.getElementById('salesmanView').classList.remove('hidden');
+                renderSalesmanBrands();
+            } else if (view === 'brandDetail') {
+                document.getElementById('brandDetailView').classList.remove('hidden');
+            }
+        }
+
+        // Toast Notification System (replaces alert)
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const msgEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+
+            msgEl.innerText = message;
+            if (isError) {
+                iconEl.innerText = 'error';
+                iconEl.className = 'material-symbols-outlined text-red-400';
+            } else {
+                iconEl.innerText = 'check_circle';
+                iconEl.className = 'material-symbols-outlined text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+
+        // Admin Authentication Modals
+        function promptAdminLogin() {
+            document.getElementById('adminPasswordModal').classList.remove('hidden');
+            document.getElementById('adminPasswordInput').value = '';
+            document.getElementById('passwordErrorMsg').classList.add('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminPasswordModal').classList.add('hidden');
+        }
+
+        // Owner Modal
+        function openOwnerModal() {
+            if (!isOwnerUser()) return;
+            renderOwnerPanel();
+            document.getElementById('ownerModal').classList.remove('hidden');
+        }
+        function closeOwnerModal() {
+            document.getElementById('ownerModal').classList.add('hidden');
+        }
+
+        // Brand Management (Admin)
+        function openBrandModal(brandId = null) {
+            fillSuggestions();
+            document.getElementById('brandModal').classList.remove('hidden');
+            document.getElementById('editingBrandId').value = brandId || '';
+            if (brandId) {
+                const brand = showroomData.find(b => b.id === brandId);
+                document.getElementById('brandNameInput').value = brand.name;
+                document.getElementById('brandDescInput').value = brand.description;
+                document.getElementById('brandModalTitle').innerText = currentLang === 'bn' ? 'ব্র্যান্ড ক্যাটালগ এডিট করুন' : 'Edit Brand Catalog';
+            } else {
+                document.getElementById('brandNameInput').value = '';
+                document.getElementById('brandDescInput').value = '';
+                document.getElementById('brandModalTitle').innerText = currentLang === 'bn' ? 'ব্র্যান্ড ক্যাটালগ তৈরি করুন' : 'Create Brand Catalog';
+            }
+        }
+
+        function closeBrandModal() {
+            document.getElementById('brandModal').classList.add('hidden');
+        }
+
+        function renderAdminBrands() {
+            const container = document.getElementById('adminBrandsContainer');
+            container.innerHTML = '';
+
+            if (showroomData.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 dark:text-slate-400">No brand catalogues found. Click "Create Brand Catalog" to begin.</div>`;
+                return;
+            }
+
+            showroomData.forEach(brand => {
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition flex flex-col justify-between';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <span class="material-symbols-outlined">inventory</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="openBrandModal('${brand.id}')" class="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Edit Brand">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                </button>
+                                <button onclick="deleteBrand('${brand.id}')" class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Delete Brand">
+                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">${esc(brand.name)}</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">${esc(brand.description) || 'No description provided.'}</p>
+                        <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-6">
+                            <span class="material-symbols-outlined text-sm">category</span>
+                            <span>${brand.products.length} Products listed</span>
+                        </div>
+                    </div>
+                    <button onclick="openBrandDetail('${brand.id}', true)" class="w-full py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-semibold text-sm transition flex items-center justify-center space-x-2">
+                        <span>Manage Products & Pricing</span>
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Salesman Brands View
+        function renderSalesmanBrands() {
+            const container = document.getElementById('salesmanBrandsContainer');
+            container.innerHTML = '';
+
+            if (showroomData.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 dark:text-slate-400">No active brand catalogues available from Admin yet.</div>`;
+                return;
+            }
+
+            showroomData.forEach(brand => {
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition flex flex-col justify-between';
+                card.innerHTML = `
+                    <div>
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                            <span class="material-symbols-outlined">store</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">${esc(brand.name)}</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">${esc(brand.description) || 'No description provided.'}</p>
+                        <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-6">
+                            <span class="material-symbols-outlined text-sm">verified</span>
+                            <span>${brand.products.length} Products Available</span>
+                        </div>
+                    </div>
+                    <button onclick="openBrandDetail('${brand.id}', false)" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition flex items-center justify-center space-x-2 shadow-md shadow-emerald-600/20">
+                        <span>View Catalog & Prices</span>
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Brand Detail & Product Management
+        function openBrandDetail(brandId, isAdmin) {
+            selectedBrandId = brandId;
+            isViewerAdmin = isAdmin;
+            switchView('brandDetail');
+            document.getElementById('productSearchInput').value = '';
+
+            const brand = showroomData.find(b => b.id === brandId);
+            document.getElementById('currentBrandNameTitle').innerText = brand.name;
+            document.getElementById('currentBrandBadge').innerText = isAdmin ? 'Admin Management' : 'Salesman Price View';
+            document.getElementById('currentBrandDescText').innerText = brand.description;
+
+            // Toggle Add Product button visibility based on role
+            const addBtn = document.getElementById('addProductHeaderBtn');
+            const pdfBtn = document.getElementById('exportPdfBtn');
+            if (isAdmin) {
+                addBtn.classList.remove('hidden');
+                pdfBtn.classList.remove('hidden');
+            } else {
+                addBtn.classList.add('hidden');
+                pdfBtn.classList.add('hidden');   // Salesman: no Save PDF
+            }
+
+            renderProductsTable(brand.products);
+            fillSuggestions();
+        }
+
+        function goBackFromBrand() {
+            if (isViewerAdmin) {
+                switchView('admin');
+            } else {
+                switchView('salesman');
+            }
+        }
+
+        function renderProductsTable(productsToRender) {
+            const tbody = document.getElementById('productsTableBody');
+            const noProducts = document.getElementById('noProductsState');
+            tbody.innerHTML = '';
+
+            document.getElementById('productCountBadge').innerText = `${productsToRender.length} Products`;
+
+            if (productsToRender.length === 0) {
+                noProducts.classList.remove('hidden');
+                return;
+            } else {
+                noProducts.classList.add('hidden');
+            }
+
+            productsToRender.forEach(prod => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition border-b border-slate-100 dark:border-slate-800 last:border-0';
+                
+                let actionsHTML = '';
+                if (isViewerAdmin) {
+                    actionsHTML = `
+                        <div class="flex items-center justify-end space-x-1">
+                            <button onclick="openProductModal('${prod.id}')" class="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Edit Product">
+                                <span class="material-symbols-outlined text-sm">edit</span>
+                            </button>
+                            <button onclick="deleteProduct('${prod.id}')" class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Delete Product">
+                                <span class="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionsHTML = `<div class="text-right text-xs text-slate-400 font-medium">Verified Price</div>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-4 px-4 sm:px-6 font-semibold text-slate-900 dark:text-white">${esc(prod.model)}</td>
+                    <td class="py-4 px-4 sm:px-6 text-slate-600 dark:text-slate-300">${esc(prod.category) || '—'}</td>
+                    <td class="py-4 px-4 sm:px-6 text-slate-600 dark:text-slate-300 font-medium">${esc(prod.size) || '—'}</td>
+                    <td class="py-4 px-4 sm:px-6 text-slate-600 dark:text-slate-300">${esc(prod.body) || '—'}</td>
+                    <td class="py-4 px-4 sm:px-6 text-slate-600 dark:text-slate-300">${esc(prod.layer) || '—'}</td>
+                    <td class="py-4 px-4 sm:px-6 font-bold text-emerald-600 dark:text-emerald-400">৳ ${Number(prod.price).toLocaleString()}</td>
+                    <td class="py-4 px-4 sm:px-6 text-right">${actionsHTML}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Instant Filter & Search Functionality
+        function filterProducts() {
+            const query = document.getElementById('productSearchInput').value.toLowerCase();
+            const brand = showroomData.find(b => b.id === selectedBrandId);
+            if (!brand) return;
+
+            const filtered = brand.products.filter(prod => 
+                prod.model.toLowerCase().includes(query) ||
+                (prod.category || '').toLowerCase().includes(query) ||
+                (prod.size || '').toLowerCase().includes(query) ||
+                (prod.body || '').toLowerCase().includes(query) ||
+                (prod.layer || '').toLowerCase().includes(query) ||
+                prod.price.toString().includes(query)
+            );
+
+            renderProductsTable(filtered);
+        }
+
+        // Product CRUD (Admin Only)
+        function openProductModal(productId = null) {
+            document.getElementById('productModal').classList.remove('hidden');
+            document.getElementById('editingProductId').value = productId || '';
+            if (productId) {
+                const brand = showroomData.find(b => b.id === selectedBrandId);
+                const prod = brand.products.find(p => p.id === productId);
+                document.getElementById('productModelInput').value = prod.model;
+                document.getElementById('productCategoryInput').value = prod.category || '';
+                document.getElementById('productSizeInput').value = prod.size || '';
+                document.getElementById('productBodyInput').value = prod.body || '';
+                document.getElementById('productLayerInput').value = prod.layer || '';
+                document.getElementById('productPriceInput').value = prod.price;
+                fillCategoryList();
+                document.getElementById('productModalTitle').innerText = currentLang === 'bn' ? 'প্রোডাক্ট এডিট করুন' : 'Edit Product Details';
+            } else {
+                document.getElementById('productModelInput').value = '';
+                document.getElementById('productCategoryInput').value = '';
+                document.getElementById('productSizeInput').value = '';
+                document.getElementById('productBodyInput').value = '';
+                document.getElementById('productLayerInput').value = '';
+                document.getElementById('productPriceInput').value = '';
+                fillCategoryList();
+                document.getElementById('productModalTitle').innerText = currentLang === 'bn' ? 'নতুন প্রোডাক্ট যোগ করুন' : 'Add New Product';
+            }
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        // Suggestions: each field offers only its own earlier entries (passwords excluded)
+        function setDL(id, vals) {
+            const uniq = [...new Set(vals.map(v => String(v ?? '').trim()).filter(Boolean))];
+            document.getElementById(id).innerHTML = uniq.map(v => `<option value="${esc(v)}"></option>`).join('');
+        }
+        function fillSuggestions() {
+            const prods = showroomData.flatMap(b => b.products);
+            setDL('dlBrandName', showroomData.map(b => b.name));
+            setDL('dlBrandDesc', showroomData.map(b => b.description));
+            setDL('dlModel', prods.map(p => p.model));
+            setDL('categoryList', prods.map(p => p.category));
+            setDL('dlSize', prods.map(p => p.size));
+            setDL('dlBody', prods.map(p => p.body));
+            setDL('dlLayer', prods.map(p => p.layer));
+            setDL('dlPrice', prods.map(p => p.price));
+            const cur = (showroomData.find(b => b.id === selectedBrandId) || { products: [] }).products;
+            setDL('dlSearch', cur.flatMap(p => [p.model, p.category, p.size, p.body, p.layer]));
+        }
+        function fillCategoryList() { fillSuggestions(); }
+
+        // PDF Export (Admin only): products grouped by Category, one block per category, serial numbers
+        function buildPrintArea(brand) {
+            const none = currentLang === 'bn' ? 'ক্যাটাগরি ছাড়া' : 'Uncategorized';
+            const groups = {};
+            brand.products.forEach(p => { const c = (p.category || '').trim() || none; (groups[c] = groups[c] || []).push(p); });
+            const names = Object.keys(groups).sort((a, b) => a === none ? 1 : b === none ? -1 : a.localeCompare(b));
+            let rows = `<tr><td><div class="pa-head"><h1>${esc(brand.name)} — Price List</h1>${brand.description ? `<p>${esc(brand.description)}</p>` : ''}</div></td></tr>`;
+            names.forEach(name => {
+                rows += `<tr><td><div class="pa-block"><h2>${esc(name)} <span>(${groups[name].length})</span></h2><table><thead><tr><th class="n">#</th><th>Model Name / Number</th><th>Size</th><th>Body Structure</th><th>Layer</th><th class="r">Price (BDT)</th></tr></thead><tbody>` +
+                    groups[name].map((p, i) => `<tr><td class="n">${i + 1}</td><td>${esc(p.model)}</td><td>${esc(p.size) || '—'}</td><td>${esc(p.body) || '—'}</td><td>${esc(p.layer) || '—'}</td><td class="r">৳ ${Number(p.price).toLocaleString()}</td></tr>`).join('') +
+                    `</tbody></table></div></td></tr>`;
+            });
+            if (!names.length) rows += '<tr><td><p>No products.</p></td></tr>';
+            // the app title sits in <thead>, so it repeats at the top of every A4 page
+            document.getElementById('printArea').innerHTML = `<table class="pa-wrap"><thead><tr><td><div class="pa-app">Minar Catalogue &amp; Price Manager Digital App</div></td></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+
+        function exportBrandPDF() {
+            if (!isViewerAdmin) return;                      // Salesman cannot save PDF
+            const brand = showroomData.find(b => b.id === selectedBrandId);
+            if (!brand) return;
+            buildPrintArea(brand);
+            const oldTitle = document.title;
+            document.title = '\u00A0';   // blank title: the browser's small header line no longer repeats the brand name
+            document.body.classList.add('printing');
+            showToast(`Generating PDF price list for ${brand.name}...`);
+            setTimeout(() => {
+                window.print();                               // choose "Save as PDF" in the print dialog
+                document.title = oldTitle;
+                document.body.classList.remove('printing');
+            }, 300);
+        }
+
+        // ===== Supabase: accounts, owner actions, shared data =====
+        const L = (en, bn) => currentLang === 'bn' ? bn : en;
+        const sb = (window.supabase && window.APP_CONFIG && APP_CONFIG.SUPABASE_URL && !APP_CONFIG.SUPABASE_URL.includes('YOUR-PROJECT'))
+            ? window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY) : null;
+        let me = null, dataLoaded = false;
+        const _switchView = switchView;
+        const isOwnerUser = () => !!(me && me.is_owner && me.status === 'approved');
+
+        async function loadAllData() {
+            const { data, error } = await sb.from('brands').select('*, products(*)').order('created_at');
+            if (error) { showToast(error.message, true); return; }
+            showroomData = data.map(b => ({ id: b.id, name: b.name, description: b.description || '',
+                products: (b.products || []).sort((x, y) => x.created_at < y.created_at ? -1 : 1).map(p => ({ id: p.id, model: p.model, category: p.category || '', size: p.size || '', body: p.body || '', layer: p.layer || '', price: Number(p.price) })) }));
+        }
+        async function dbRun(promise, okMsg) {
+            const { error } = await promise;
+            if (error) { showToast(/row-level security/i.test(error.message) ? L('Admin is locked. Re-enter the admin password.', 'অ্যাডমিন লক হয়ে গেছে। আবার অ্যাডমিন পাসওয়ার্ড দিন।') : error.message, true); return false; }
+            showToast(okMsg); return true;
+        }
+        const val = id => document.getElementById(id).value.trim();
+
+        async function saveBrandForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('editingBrandId').value, row = { name: val('brandNameInput'), description: val('brandDescInput') };
+            const ok = id ? await dbRun(sb.from('brands').update(row).eq('id', id), L('Brand updated successfully!', 'ব্র্যান্ড আপডেট হয়েছে!'))
+                          : await dbRun(sb.from('brands').insert(row), L('New brand catalogue created successfully!', 'নতুন ব্র্যান্ড ক্যাটালগ তৈরি হয়েছে!'));
+            if (!ok) return;
+            closeBrandModal(); await loadAllData(); renderAdminBrands();
+        }
+        async function deleteBrand(id) {
+            if (!confirm(L('Are you sure you want to delete this brand and all its products?', 'এই ব্র্যান্ড ও এর সব প্রোডাক্ট ডিলিট করবেন?'))) return;
+            if (await dbRun(sb.from('brands').delete().eq('id', id), L('Brand deleted successfully.', 'ব্র্যান্ড ডিলিট হয়েছে।'))) { await loadAllData(); renderAdminBrands(); }
+        }
+        async function saveProductForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('editingProductId').value;
+            const row = { model: val('productModelInput'), category: val('productCategoryInput'), size: val('productSizeInput'), body: val('productBodyInput'), layer: val('productLayerInput'), price: parseFloat(document.getElementById('productPriceInput').value) };
+            const ok = id ? await dbRun(sb.from('products').update(row).eq('id', id), L('Product updated successfully!', 'প্রোডাক্ট আপডেট হয়েছে!'))
+                          : await dbRun(sb.from('products').insert({ ...row, brand_id: selectedBrandId }), L('Product added successfully!', 'প্রোডাক্ট যোগ হয়েছে!'));
+            if (!ok) return;
+            closeProductModal(); await loadAllData(); filterProducts(); fillSuggestions();
+        }
+        async function deleteProduct(id) {
+            if (!confirm(L('Are you sure you want to delete this product?', 'এই প্রোডাক্ট ডিলিট করবেন?'))) return;
+            if (await dbRun(sb.from('products').delete().eq('id', id), L('Product deleted successfully.', 'প্রোডাক্ট ডিলিট হয়েছে।'))) { await loadAllData(); filterProducts(); }
+        }
+        async function handleAdminLogin(e) {                      // password is checked on the server
+            e.preventDefault();
+            const { data } = await sb.rpc('unlock_admin', { pwd: document.getElementById('adminPasswordInput').value });
+            if (data === true) { isViewerAdmin = true; closeAdminModal(); switchView('admin'); showToast(L('Admin authentication successful!', 'অ্যাডমিন লগইন সফল হয়েছে!')); }
+            else document.getElementById('passwordErrorMsg').classList.remove('hidden');
+        }
+
+        // ---- login / apply gate
+        let authMode = 'login';
+        const gmailOk = e => /^[a-z0-9._%+-]+@gmail\.com$/.test(e);
+        function setAuthMode(mode) {
+            authMode = mode;
+            const on = 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow', off = 'text-slate-500';
+            document.getElementById('tabLogin').className = 'py-2 rounded-lg ' + (mode === 'login' ? on : off);
+            document.getElementById('tabApply').className = 'py-2 rounded-lg ' + (mode === 'apply' ? on : off);
+            document.getElementById('authSubmitBtn').innerText = mode === 'login' ? L('Login', 'লগইন') : L('Send Request', 'আবেদন পাঠান');
+            document.getElementById('authMsg').classList.add('hidden');
+        }
+        function authMessage(text, ok) {
+            const el = document.getElementById('authMsg');
+            el.innerText = text;
+            el.className = 'text-xs font-medium text-center rounded-lg px-3 py-2 ' + (ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600');
+        }
+        const STATUS_MSG = {
+            pending: () => L('Still pending. The App Owner has not approved yet.', 'আবেদন এখনো অপেক্ষমান। ওনার অনুমোদন দেননি।'),
+            locked: () => L('Your access is locked by the App Owner.', 'অ্যাপ ওনার আপনার অ্যাক্সেস লক করেছেন।'),
+            kicked: () => L('You were removed from the app. Use "Apply for Access" with this Gmail to request again.', 'আপনাকে অ্যাপ থেকে সরানো হয়েছে। এই Gmail দিয়ে "ব্যবহারের আবেদন" করে আবার আবেদন করুন।'),
+            rejected: () => L('Your request was rejected. You can apply again.', 'আপনার আবেদন বাতিল হয়েছে। আবার আবেদন করতে পারেন।')
+        };
+        async function refreshMe() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) { me = null; return null; }
+            const { data } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+            me = data || null; return me;
+        }
+        async function enforceSession(reload = false) {
+            const gate = document.getElementById('authGate');
+            if (!sb) { gate.classList.remove('hidden'); authMessage('Supabase is not connected yet. Fill in config.js.', false); return false; }
+            await refreshMe();
+            const ok = !!(me && me.status === 'approved');
+            gate.classList.toggle('hidden', ok);
+            document.body.classList.toggle('is-owner', isOwnerUser());
+            if (ok) {
+                document.getElementById('profileEmail').innerText = me.email;
+                document.getElementById('profileAvatar').innerText = me.email[0];
+                document.getElementById('profileRole').innerText = me.is_owner ? 'App Owner' : L('User', 'ইউজার');
+                if (!dataLoaded || reload) { await loadAllData(); dataLoaded = true; if (currentRole === 'admin') renderAdminBrands(); if (currentRole === 'salesman') renderSalesmanBrands(); }
+            } else if (me) {                              // pending / locked / kicked / rejected: sign out and explain
+                const st = me.status; await sb.auth.signOut(); me = null; dataLoaded = false; showroomData = [];
+                _switchView('home'); setAuthMode('login'); authMessage(STATUS_MSG[st](), false);
+            }
+            return ok;
+        }
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            if (!sb) { authMessage('Supabase is not connected yet. Fill in config.js.', false); return; }
+            const email = val('authEmail').toLowerCase(), password = document.getElementById('authPassword').value;
+            if (!gmailOk(email)) { authMessage(L('Please enter a valid Gmail address.', 'সঠিক Gmail ঠিকানা দিন।'), false); return; }
+            const btn = document.getElementById('authSubmitBtn'); btn.disabled = true;
+            try {
+                if (authMode === 'apply') {
+                    const { data, error } = await sb.auth.signUp({ email, password });
+                    if (error && /registered|already/i.test(error.message)) {          // existing account: re-apply if removed/rejected
+                        const r = await sb.auth.signInWithPassword({ email, password });
+                        if (r.error) { authMessage(L('This Gmail is already registered. Please login (check your password).', 'এই Gmail আগেই নিবন্ধিত। পাসওয়ার্ড দেখে লগইন করুন।'), false); return; }
+                        await refreshMe(); const st = me && me.status;
+                        if (st === 'kicked' || st === 'rejected') { await sb.rpc('reapply'); await sb.auth.signOut(); me = null; authMessage(L('Request sent again. Wait for the App Owner to approve.', 'আবার আবেদন পাঠানো হয়েছে। অ্যাপ ওনারের অনুমোদনের জন্য অপেক্ষা করুন।'), true); return; }
+                        await sb.auth.signOut(); me = null;
+                        authMessage(st === 'pending' ? L('Your request is already pending approval.', 'আপনার আবেদন ইতিমধ্যে অপেক্ষমান আছে।') : L('This Gmail is already registered. Please login.', 'এই Gmail আগেই নিবন্ধিত। লগইন করুন।'), false); return;
+                    }
+                    if (error) { authMessage(error.message, false); return; }
+                    if (!data.session) { authMessage(L('Check your email to confirm, then login.', 'ইমেইল কনফার্ম করে লগইন করুন।'), true); return; }
+                    await refreshMe();
+                    if (me && me.status === 'approved') { await enforceSession(); return; }   // the very first account becomes the App Owner
+                    await sb.auth.signOut(); me = null;
+                    authMessage(L('Request sent. Wait for the App Owner to approve.', 'আবেদন পাঠানো হয়েছে। অ্যাপ ওনারের অনুমোদনের জন্য অপেক্ষা করুন।'), true); return;
+                }
+                const { error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) { authMessage(L('Incorrect Gmail or password, or no account yet.', 'Gmail বা পাসওয়ার্ড ভুল, অথবা অ্যাকাউন্ট নেই।'), false); return; }
+                await enforceSession();
+            } finally { btn.disabled = false; }
+        }
+        async function logoutUser() {
+            await sb.auth.signOut(); me = null; dataLoaded = false; showroomData = []; isViewerAdmin = false;
+            document.getElementById('settingsPanel').classList.add('hidden');
+            _switchView('home'); await enforceSession();
+        }
+
+        // ---- owner panel
+        async function renderOwnerPanel() {
+            const { data } = await sb.from('profiles').select('*').eq('is_owner', false).order('created_at');
+            const users = data || [];
+            const btn = (cls, label, act, id) => `<button onclick="ownerAction('${act}','${id}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${cls}">${label}</button>`;
+            const row = (u, buttons, note) => `<div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"><div class="min-w-0"><p class="text-sm font-semibold truncate text-slate-900 dark:text-white">${esc(u.email)}</p>${note ? `<p class="text-[11px] text-amber-600">${note}</p>` : ''}</div><div class="flex gap-1.5 shrink-0">${buttons}</div></div>`;
+            const pending = users.filter(u => u.status === 'pending'), active = users.filter(u => u.status === 'approved' || u.status === 'locked');
+            document.getElementById('ownerPendingList').innerHTML = pending.length
+                ? pending.map(u => row(u, btn('bg-emerald-600 text-white', L('Approve', 'অনুমোদন'), 'approve', u.id) + btn('bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200', L('Reject', 'বাতিল'), 'reject', u.id))).join('')
+                : `<p class="text-xs text-slate-400">${L('No pending requests.', 'কোনো অপেক্ষমান আবেদন নেই।')}</p>`;
+            document.getElementById('ownerUsersList').innerHTML = active.length
+                ? active.map(u => row(u, btn('bg-amber-100 text-amber-800', u.status === 'locked' ? L('Unlock', 'আনলক') : 'App Lock', u.status === 'locked' ? 'unlock' : 'lock', u.id) + btn('bg-red-100 text-red-700', 'Kick User', 'kick', u.id), u.status === 'locked' ? L('Locked', 'লক করা আছে') : '')).join('')
+                : `<p class="text-xs text-slate-400">${L('No approved users yet.', 'এখনো কোনো অনুমোদিত ইউজার নেই।')}</p>`;
+        }
+        async function ownerAction(action, id) {
+            if (!isOwnerUser()) return;
+            if (action === 'kick' && !confirm(L('Remove this user completely?', 'এই ইউজারকে সম্পূর্ণ সরিয়ে দেবেন?'))) return;
+            const status = { approve: 'approved', reject: 'rejected', lock: 'locked', unlock: 'approved', kick: 'kicked' }[action];
+            const { error } = await sb.from('profiles').update({ status }).eq('id', id);
+            showToast(error ? error.message : L('Done.', 'সম্পন্ন হয়েছে।'), !!error);
+            renderOwnerPanel();
+        }
+
+        // ---- settings gear, admin password change, install
+        function toggleSettings(e) { e.stopPropagation(); document.getElementById('settingsPanel').classList.toggle('hidden'); }
+        document.addEventListener('click', () => document.getElementById('settingsPanel').classList.add('hidden'));
+        function openPwdModal() {
+            document.getElementById('settingsPanel').classList.add('hidden');
+            document.getElementById('oldPwdInput').value = ''; document.getElementById('newPwdInput').value = '';
+            document.getElementById('pwdErrorMsg').classList.add('hidden');
+            document.getElementById('pwdModal').classList.remove('hidden');
+        }
+        function closePwdModal() { document.getElementById('pwdModal').classList.add('hidden'); }
+        async function handlePwdChange(e) {
+            e.preventDefault();
+            const old = document.getElementById('oldPwdInput').value, nw = document.getElementById('newPwdInput').value, err = document.getElementById('pwdErrorMsg');
+            if (nw.length < 4) { err.innerText = L('New password must be at least 4 characters.', 'নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।'); err.classList.remove('hidden'); return; }
+            const { data } = await sb.rpc('change_admin_password', { old_pwd: old, new_pwd: nw });
+            if (data !== true) { err.innerText = L('Old password is incorrect.', 'পুরাতন পাসওয়ার্ড সঠিক নয়।'); err.classList.remove('hidden'); return; }
+            closePwdModal(); showToast(L('Admin password changed successfully.', 'অ্যাডমিন পাসওয়ার্ড পরিবর্তন হয়েছে।'));
+        }
+        let installEvt = null;
+        window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; document.getElementById('installBtn').classList.remove('hidden'); });
+        async function installApp() { if (installEvt) { installEvt.prompt(); installEvt = null; document.getElementById('installBtn').classList.add('hidden'); } }
+        if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+        // ---- wrappers + start
+        const _toggleLang = toggleLanguage;
+        toggleLanguage = function () { _toggleLang(); document.getElementById('gateLangLabel').innerText = currentLang === 'en' ? 'বাংলা' : 'English'; setAuthMode(authMode); };
+        switchView = function (v) { if (!(me && me.status === 'approved')) return; _switchView(v); };
+        setInterval(() => { if (me) enforceSession(); }, 20000);                                   // catches Lock / Kick while the app is open
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && me) enforceSession(true); });
+        setAuthMode('login');
+        enforceSession();
+    </script>
+</body>
+</html>
