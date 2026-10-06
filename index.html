@@ -1049,6 +1049,11 @@
         const L = (en, bn) => currentLang === 'bn' ? bn : en;
         const sb = (window.supabase && window.APP_CONFIG && APP_CONFIG.SUPABASE_URL && !APP_CONFIG.SUPABASE_URL.includes('YOUR-PROJECT'))
             ? window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY) : null;
+        function notConnectedMsg() {
+            if (!window.supabase) return 'Supabase library did not load. Check the internet connection and reload the page.';
+            if (!window.APP_CONFIG) return 'config.js was not found. Make sure config.js is uploaded next to index.html.';
+            return 'config.js still has the placeholder values. Put your real SUPABASE_URL and SUPABASE_ANON_KEY in config.js, upload it, then reload.';
+        }
         let me = null, dataLoaded = false;
         const _switchView = switchView;
         const isOwnerUser = () => !!(me && me.is_owner && me.status === 'approved');
@@ -1128,7 +1133,7 @@
         }
         async function enforceSession(reload = false) {
             const gate = document.getElementById('authGate');
-            if (!sb) { gate.classList.remove('hidden'); authMessage('Supabase is not connected yet. Fill in config.js.', false); return false; }
+            if (!sb) { gate.classList.remove('hidden'); authMessage(notConnectedMsg(), false); return false; }
             await refreshMe();
             const ok = !!(me && me.status === 'approved');
             gate.classList.toggle('hidden', ok);
@@ -1146,7 +1151,7 @@
         }
         async function handleAuthSubmit(e) {
             e.preventDefault();
-            if (!sb) { authMessage('Supabase is not connected yet. Fill in config.js.', false); return; }
+            if (!sb) { authMessage(notConnectedMsg(), false); return; }
             const email = val('authEmail').toLowerCase(), password = document.getElementById('authPassword').value;
             if (!gmailOk(email)) { authMessage(L('Please enter a valid Gmail address.', 'সঠিক Gmail ঠিকানা দিন।'), false); return; }
             const btn = document.getElementById('authSubmitBtn'); btn.disabled = true;
