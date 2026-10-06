@@ -94,7 +94,7 @@
     <script>
         (function () {
             var d = document.documentElement; d.classList.add('booting');
-            try { var t = localStorage.getItem('theme'); if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) d.classList.add('dark'); } catch (e) {}
+            try { var t = localStorage.getItem('theme'); if (t === 'dark') d.classList.add('dark'); /* default = light mode */ } catch (e) {}
         })();
     </script>
 </head>
@@ -743,7 +743,7 @@
         }
 
         // Initialize Theme from Storage
-        if (safeGet('theme') === 'dark' || (!safeGet('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (safeGet('theme') === 'dark') {   // default = light mode; dark only if the user chose it
             document.documentElement.classList.add('dark');
         }
 
@@ -1254,7 +1254,7 @@
             const row = (u, buttons, note) => `<div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"><div class="min-w-0"><p class="text-sm font-semibold truncate text-slate-900 dark:text-white">${esc(u.email)}</p>${note ? `<p class="text-[11px] text-amber-600">${note}</p>` : ''}</div><div class="flex gap-1.5 shrink-0">${buttons}</div></div>`;
             const pending = users.filter(u => u.status === 'pending'), active = users.filter(u => u.status === 'approved' || u.status === 'locked');
             document.getElementById('ownerPendingList').innerHTML = pending.length
-                ? pending.map(u => row(u, btn('bg-emerald-600 text-white', L('Approve', 'অনুমোদন'), 'approve', u.id) + btn('bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200', L('Reject', 'বাতিল'), 'reject', u.id))).join('')
+                ? pending.map(u => row(u, btn('bg-emerald-600 text-white', L('Approve', 'অনুমোদন'), 'approve', u.id) + btn('bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200', L('Reject', 'বাতিল'), 'reject', u.id), u.was_kicked ? L('Re-applied after being kicked', 'Kick করার পর আবার আবেদন করেছেন') : '')).join('')
                 : `<p class="text-xs text-slate-400">${L('No pending requests.', 'কোনো অপেক্ষমান আবেদন নেই।')}</p>`;
             document.getElementById('ownerUsersList').innerHTML = active.length
                 ? active.map(u => row(u, btn('bg-amber-100 text-amber-800', u.status === 'locked' ? L('Unlock', 'আনলক') : 'App Lock', u.status === 'locked' ? 'unlock' : 'lock', u.id) + btn('bg-red-100 text-red-700', 'Kick User', 'kick', u.id), u.status === 'locked' ? L('Locked', 'লক করা আছে') : '')).join('')
