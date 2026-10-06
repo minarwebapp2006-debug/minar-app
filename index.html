@@ -85,8 +85,24 @@
             #printArea .r { text-align: right; white-space: nowrap; }
         }
     </style>
+    <style>
+        /* startup: hide the login screen until we know whether the user is already signed in */
+        html.booting #authGate { display: none; }
+        #bootSplash { display: none; }
+        html.booting #bootSplash { display: flex; }
+    </style>
+    <script>
+        (function () {
+            var d = document.documentElement; d.classList.add('booting');
+            try { var t = localStorage.getItem('theme'); if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) d.classList.add('dark'); } catch (e) {}
+        })();
+    </script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+    <!-- Startup splash (shown only while the sign-in state is being checked) -->
+    <div id="bootSplash" class="fixed inset-0 z-[80] bg-slate-50 dark:bg-slate-950 items-center justify-center">
+        <span class="material-symbols-outlined text-4xl text-emerald-600 animate-pulse">storefront</span>
+    </div>
 
     <!-- Top Navigation Bar -->
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-emerald-100 dark:border-emerald-900/40 shadow-sm">
@@ -1179,14 +1195,16 @@
             if (!sb) { gate.classList.remove('hidden'); authMessage(notConnectedMsg(), false); return false; }
             await refreshMe();
             const ok = !!(me && me.status === 'approved');
+            try { localStorage.setItem('mcpm_ok', ok ? '1' : '0'); } catch (e) {}
             gate.classList.toggle('hidden', ok);
             document.body.classList.toggle('is-owner', isOwnerUser());
             if (ok) {
                 document.getElementById('profileEmail').innerText = me.email;
                 document.getElementById('profileAvatar').innerText = me.email[0];
                 document.getElementById('profileRole').innerText = me.is_owner ? 'App Owner' : L('User', 'ইউজার');
-                await refreshAdminPwdState();
+                const pwdState = refreshAdminPwdState();
                 if (!dataLoaded || reload) { await loadAllData(); dataLoaded = true; if (currentRole === 'admin') renderAdminBrands(); if (currentRole === 'salesman') renderSalesmanBrands(); }
+                await pwdState;
             } else if (me) {                              // pending / locked / kicked / rejected: sign out and explain
                 const st = me.status; await sb.auth.signOut(); me = null; dataLoaded = false; showroomData = [];
                 _switchView('home'); setAuthMode('login'); authMessage(STATUS_MSG[st](), false);
@@ -1308,9 +1326,16 @@
         toggleLanguage = function () { _toggleLang(); document.getElementById('gateLangLabel').innerText = currentLang === 'en' ? 'বাংলা' : 'English'; setAuthMode(authMode); };
         switchView = function (v) { if (!(me && me.status === 'approved')) return; _switchView(v); };
         setInterval(() => { if (me) enforceSession(); }, 20000);                                   // catches Lock / Kick while the app is open
-        document.addEventListener('visibilitychange', () => { if (!document.hidden && me) enforceSession(true); });
+        let hiddenAt = 0;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { hiddenAt = Date.now(); return; }
+            if (me) enforceSession(Date.now() - hiddenAt > 60000);                   // full data reload only after a longer absence
+        });
         setAuthMode('login');
-        enforceSession();
+        const endBoot = () => document.documentElement.classList.remove('booting');
+        let wasSignedIn = false; try { wasSignedIn = localStorage.getItem('mcpm_ok') === '1'; } catch (e) {}
+        if (wasSignedIn) { document.getElementById('authGate').classList.add('hidden'); endBoot(); }   // reopening: go straight to the app, verify in the background
+        enforceSession().finally(endBoot);
     </script>
 </body>
 </html>
