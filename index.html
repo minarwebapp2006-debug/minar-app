@@ -1224,7 +1224,14 @@
                         const r = await sb.auth.signInWithPassword({ email, password });
                         if (r.error) { authMessage(L('This Gmail is already registered. Please login (check your password).', 'এই Gmail আগেই নিবন্ধিত। পাসওয়ার্ড দেখে লগইন করুন।'), false); return; }
                         await refreshMe(); const st = me && me.status;
-                        if (st === 'kicked' || st === 'rejected') { await sb.rpc('reapply'); await sb.auth.signOut(); me = null; authMessage(L('Request sent again. Wait for the App Owner to approve.', 'আবার আবেদন পাঠানো হয়েছে। অ্যাপ ওনারের অনুমোদনের জন্য অপেক্ষা করুন।'), true); return; }
+                        if (st === 'kicked' || st === 'rejected') {
+                            const rp = await sb.rpc('reapply'); await refreshMe();
+                            const sent = !rp.error && me && me.status === 'pending';              // confirm the request really reached the App Owner
+                            await sb.auth.signOut(); me = null;
+                            if (sent) authMessage(L('Request sent again. Wait for the App Owner to approve.', 'আবার আবেদন পাঠানো হয়েছে। অ্যাপ ওনারের অনুমোদনের জন্য অপেক্ষা করুন।'), true);
+                            else authMessage(L('Could not send the request. Please try again, or contact the App Owner.', 'আবেদন পাঠানো যায়নি। আবার চেষ্টা করুন বা অ্যাপ ওনারকে জানান।') + (rp.error ? ' (' + rp.error.message + ')' : ''), false);
+                            return;
+                        }
                         await sb.auth.signOut(); me = null;
                         authMessage(st === 'pending' ? L('Your request is already pending approval.', 'আপনার আবেদন ইতিমধ্যে অপেক্ষমান আছে।') : L('This Gmail is already registered. Please login.', 'এই Gmail আগেই নিবন্ধিত। লগইন করুন।'), false); return;
                     }
@@ -1263,6 +1270,11 @@
         async function ownerAction(action, id) {
             if (!isOwnerUser()) return;
             if (action === 'kick' && !confirm(L('Remove this user completely?', 'এই ইউজারকে সম্পূর্ণ সরিয়ে দেবেন?'))) return;
+            if (action === 'kick') {                                    // kick = remove the account completely (same Gmail can apply again with any password)
+                const k = await sb.rpc('kick_user', { target: id });
+                showToast(k.error ? k.error.message : (k.data === true ? L('User removed.', 'ইউজারকে সরানো হয়েছে।') : L('Could not remove this user.', 'ইউজারকে সরানো যায়নি।')), !!k.error || k.data !== true);
+                renderOwnerPanel(); return;
+            }
             const status = { approve: 'approved', reject: 'rejected', lock: 'locked', unlock: 'approved', kick: 'kicked' }[action];
             const { error } = await sb.from('profiles').update({ status }).eq('id', id);
             showToast(error ? error.message : L('Done.', 'সম্পন্ন হয়েছে।'), !!error);
